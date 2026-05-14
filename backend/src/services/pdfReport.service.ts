@@ -1,5 +1,6 @@
 import PDFDocument from 'pdfkit';
 import { PassThrough } from 'stream';
+import { getPublicAppUrl, resolveBrandLogoPath } from '../utils/brandAssets';
 import type {
   SeoPageReport,
 } from '../models/scan.model';
@@ -114,6 +115,33 @@ function healthStatus(avgScore: number): 'Excellent' | 'Good' | 'Needs Improveme
 
 function clampScore(score: number): number {
   return Math.max(0, Math.min(100, score));
+}
+
+type PdfDoc = InstanceType<typeof PDFDocument>;
+
+function drawBrandedPdfHeader(doc: PdfDoc, title: string, subtitle: string): void {
+  const marginTop = (doc as unknown as { page: { margins?: { top: number } } }).page.margins?.top ?? 48;
+  doc.y = marginTop;
+  const logoPath = resolveBrandLogoPath();
+  const mid = doc.page.width / 2;
+  let y = doc.y;
+  if (logoPath) {
+    try {
+      const w = 118;
+      const x = mid - w / 2;
+      doc.image(logoPath, x, y, { width: w });
+      const appUrl = getPublicAppUrl();
+      if (appUrl) doc.link(x, y, w, 44, appUrl);
+      y += 48;
+    } catch {
+      /* optional asset */
+    }
+  }
+  doc.y = y;
+  doc.fontSize(20).fillColor('#0f172a').text(title, { align: 'center' });
+  doc.moveDown(0.4);
+  doc.fontSize(11).fillColor('#334155').text(subtitle, { align: 'center' });
+  doc.moveDown(0.8);
 }
 
 function keywordQuickAction(rep: SeoPageReport): string {
@@ -237,10 +265,11 @@ export function renderPdf(intelligenceReport: IntelligenceReport): Promise<Buffe
       doc.moveDown(0.5);
     };
 
-    doc.fontSize(20).fillColor('#0f172a').text('SEO audit report', { align: 'center' });
-    doc.moveDown(0.4);
-    doc.fontSize(11).fillColor('#334155').text(`Pages analyzed: ${intelligenceReport.summary.pagesAnalyzed}`, { align: 'center' });
-    doc.moveDown(0.8);
+    drawBrandedPdfHeader(
+      doc,
+      'SEO audit report',
+      `Pages analyzed: ${intelligenceReport.summary.pagesAnalyzed}`
+    );
 
     sectionTitle('1. Enhanced Executive Summary');
     const overallVerdict =
@@ -888,10 +917,7 @@ export function buildScanReportPdf(meta: ScanPdfMeta, issues: ScanPdfIssueRow[])
 
     const contentWidth = doc.page.width - 96;
 
-    doc.fontSize(20).fillColor('#0f172a').text('SEO scan report', { align: 'center' });
-    doc.moveDown(0.5);
-    doc.fontSize(11).fillColor('#334155').text(`Domain: ${meta.domain}`, { align: 'center' });
-    doc.moveDown(1.2);
+    drawBrandedPdfHeader(doc, 'SEO scan report', `Domain: ${meta.domain}`);
 
     doc.fontSize(12).fillColor('#0f172a').text('Summary', { underline: true });
     doc.moveDown(0.4);

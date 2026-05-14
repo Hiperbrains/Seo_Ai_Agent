@@ -11,6 +11,7 @@ import {
   suggestedFilename,
 } from './pdfReport.service';
 import { buildIntelligenceReport } from './intelligenceReport.service';
+import { getPublicAppUrl, resolveBrandLogoPath } from '../utils/brandAssets';
 
 export interface EmailReportPayload {
   scanId?: number;
@@ -98,12 +99,22 @@ export async function sendReportEmail(payload: EmailReportPayload): Promise<{ ok
     '',
     'PDF report attached: open the attachment for full page-by-page findings and recommendations.',
   ].join('\n');
+  const logoPath = resolveBrandLogoPath();
+  const appUrl = getPublicAppUrl();
+  const logoImgTag = logoPath
+    ? appUrl
+      ? `<a href="${appUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;line-height:0;border-radius:10px;overflow:hidden;">
+           <img src="cid:ai-seo-agent-logo" alt="AI SEO Agent" width="220" height="auto" style="display:block;max-width:100%;height:auto;border:0;" />
+         </a>`
+      : `<img src="cid:ai-seo-agent-logo" alt="AI SEO Agent" width="220" height="auto" style="display:block;max-width:100%;height:auto;border:0;" />`
+    : `<div style="font-size:26px;font-weight:700;line-height:1.2;color:#e2e8f0;">AI SEO Agent</div>`;
+
   const html = `
     <div style="background:#0f172a;padding:24px;font-family:Arial,'Segoe UI',Helvetica,sans-serif;color:#e2e8f0;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;">
       <div style="max-width:680px;margin:0 auto;border:1px solid #334155;border-radius:12px;overflow:hidden;background:#111c33;">
-        <div style="padding:20px 22px;border-bottom:2px solid #5eead4;">
-          <div style="font-size:26px;font-weight:700;line-height:1.2;color:#e2e8f0;">AI SEO Agent</div>
-          <div style="margin-top:6px;color:#94a3b8;font-size:14px;">Your intelligent SEO audit assistant</div>
+        <div style="padding:20px 22px;border-bottom:2px solid #5eead4;text-align:center;">
+          ${logoImgTag}
+          <div style="margin-top:10px;color:#94a3b8;font-size:14px;">Your intelligent SEO audit assistant</div>
         </div>
         <div style="padding:22px;">
           <p style="margin:0 0 14px;font-size:30px;font-weight:700;line-height:1.25;color:#e2e8f0;">Hi there,</p>
@@ -136,21 +147,28 @@ export async function sendReportEmail(payload: EmailReportPayload): Promise<{ ok
   try {
     const pdfAttachment = payload.scanId ? await buildDownloadPdfAttachment(payload.scanId) : null;
 
+    const attachments: Array<
+      | { filename: string; path: string; cid: string }
+      | { filename: string; content: Buffer; contentType: string }
+    > = [];
+    if (logoPath) {
+      attachments.push({ filename: 'ai-seo-agent-logo.png', path: logoPath, cid: 'ai-seo-agent-logo' });
+    }
+    if (pdfAttachment) {
+      attachments.push({
+        filename: pdfAttachment.filename,
+        content: pdfAttachment.content,
+        contentType: 'application/pdf',
+      });
+    }
+
     await transporter.sendMail({
       from: from || user,
       to: payload.to,
       subject,
       text,
       html,
-      attachments: pdfAttachment
-        ? [
-            {
-              filename: pdfAttachment.filename,
-              content: pdfAttachment.content,
-              contentType: 'application/pdf',
-            },
-          ]
-        : undefined,
+      attachments: attachments.length ? attachments : undefined,
     });
     return { ok: true };
   } catch (e) {

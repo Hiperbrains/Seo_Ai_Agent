@@ -39,6 +39,7 @@ COPY --from=builder /ms-playwright /ms-playwright
 COPY --from=builder /build/backend/package.json ./
 COPY --from=builder /build/backend/node_modules ./node_modules
 COPY --from=builder /build/backend/dist ./dist
+COPY --from=builder /build/backend/assets ./assets
 COPY --from=builder /build/frontend/angular-dashboard/dist ./frontend/angular-dashboard/dist
 
 RUN mkdir -p /app/data
