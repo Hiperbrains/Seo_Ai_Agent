@@ -557,7 +557,12 @@
 }
 
 .schedule-table-wrap {
-  margin-top: 0.25rem;
+  margin-top: 2rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.55;
   overflow-x: auto;
 }
 
@@ -622,15 +627,6 @@
   font-weight: 600;
   cursor: pointer;
   font-family: var(--font-sans);
-}
-
-.schedule-table-wrap {
-  margin-top: 2rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--border);
-  color: var(--muted);
-  font-size: 0.875rem;
-  line-height: 1.55;
 }
 
 .nav-hint a {
